@@ -1,0 +1,58 @@
+# Production stack: Caddy (HTTPS, headers) -> app (FastAPI, 1 worker).
+#   docker compose up -d --build     start / update
+#   docker compose logs -f app       follow app logs
+# Settings come from .env (same folder). After editing .env run `docker compose up -d`
+# (a plain `restart` does NOT reload env vars). See DEPLOY.md.
+
+services:
+  app:
+    build: .
+    # GitHub Actions deploys a prebuilt image (APP_IMAGE=ghcr.io/<owner>/<repo>:<sha>); locally it is built from this folder.
+    image: ${APP_IMAGE:-seo-audit-app}
+    env_file: .env
+    volumes:
+      - app-data:/app/.tmp          # SQLite db (.tmp/app.db), job reports, crawl intermediates
+    expose:
+      - "8000"                      # internal only - never publish this port
+    restart: unless-stopped
+    init: true
+    stop_grace_period: 30s
+    mem_limit: 1.5g                 # Chromium (PDF) + 2 concurrent crawls; fits a 4 GB VPS next to Caddy
+    shm_size: 256m                  # shared memory for Chromium
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:                        # only for app/entrypoint.py: chown the data volume once, then drop to user "app"
+      - CHOWN
+      - SETUID
+      - SETGID
+    logging: &logging
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  caddy:
+    image: caddy:2-alpine
+    environment:
+      DOMAIN: ${DOMAIN:?set DOMAIN in .env}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"               # HTTP/3 (optional; harmless if the firewall blocks UDP)
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data            # TLS certificates - keep this volume
+      - caddy-config:/config
+    depends_on:
+      app:
+        condition: service_healthy
+    restart: unless-stopped
+    mem_limit: 256m
+    logging: *logging
+
+volumes:
+  app-data:
+  caddy-data:
+  caddy-config:

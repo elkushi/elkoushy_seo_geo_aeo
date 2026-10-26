@@ -1,0 +1,42 @@
+# Caddy reverse proxy with automatic HTTPS (Let's Encrypt) for {$DOMAIN}.
+# DOMAIN comes from .env via docker-compose.yml. For a local test use DOMAIN=localhost.
+# No rate-limit plugin here on purpose (stock Caddy image): the app enforces its own
+# limits (login-mail requests, per-user monthly quota, per-site cooldown, job slots).
+
+{$DOMAIN} {
+	encode zstd gzip
+
+	# API bodies are tiny JSON ({"email"}, {"url", ...}); reject anything bigger.
+	request_body {
+		max_size 64KB
+	}
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Content-Security-Policy "frame-ancestors 'none'"
+		X-Frame-Options "DENY"
+		Permissions-Policy "camera=(), microphone=(), geolocation=()"
+		-Server
+	}
+
+	reverse_proxy app:8000
+
+	# Access log to stdout (`docker compose logs caddy`). Magic-link tokens in
+	# /auth/verify?token=... are redacted; Cookie headers are redacted by Caddy by default.
+	log {
+		output stdout
+		format filter {
+			wrap console
+			request>uri query {
+				replace token REDACTED
+			}
+		}
+	}
+}
+
+# Send www to the bare domain (needs a www DNS record too; remove this block if you skip it).
+www.{$DOMAIN} {
+	redir https://{$DOMAIN}{uri} permanent
+}

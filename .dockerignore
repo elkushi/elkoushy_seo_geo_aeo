@@ -1,0 +1,37 @@
+# Secrets: never bake them into the image (compose passes .env at runtime)
+.env
+.env.*
+!.env.example
+credentials.json
+token.json
+*.pem
+*.key
+
+# Runtime data lives in the Docker volume mounted at /app/.tmp
+.tmp
+data
+backups
+
+# Local tooling / caches
+.venv
+.git
+.gitignore
+.claude
+.vscode
+.idea
+**/__pycache__
+**/*.pyc
+.DS_Store
+
+# Deployment files are not needed inside the image
+Dockerfile
+.dockerignore
+docker-compose.yml
+Caddyfile
+DEPLOY.md
+
+# CI only
+.github
+tests
+.pytest_cache
+.playwright

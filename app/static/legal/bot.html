@@ -1,0 +1,103 @@
+<!doctype html>
+<!-- Template — have it reviewed for your jurisdiction. Replace every [PLACEHOLDER] before going live. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>About our crawler · SEO · AEO · GEO Expert</title>
+<meta name="description" content="How the SEO-GEO-AEO-Audit/1.0 crawler behaves, how it respects robots.txt, and how to block it.">
+<style>
+:root{color-scheme:light dark;--bg:#f6f7f9;--card:#fff;--ink:#14171c;--muted:#5d6673;--line:#e3e6eb;--accent:#3b5bdb;--accent-ink:#fff;--accent-bg:#edf2ff;--code:#f1f3f5;--ph:#e67700;--ph-bg:#fff4e6}
+@media (prefers-color-scheme:dark){:root{--bg:#0f1115;--card:#171a21;--ink:#e8eaed;--muted:#9aa3ae;--line:#2a2f39;--accent:#748ffc;--accent-ink:#0f1115;--accent-bg:#1b2140;--code:#11141a;--ph:#ffa94d;--ph-bg:#2b2113}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15.5px/1.65 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;min-height:100vh;display:flex;flex-direction:column}
+a{color:var(--accent)}
+.top{border-bottom:1px solid var(--line);background:var(--card)}
+.bar{max-width:960px;margin:0 auto;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.brand{display:flex;align-items:center;gap:9px;font-weight:700;letter-spacing:-.01em;color:var(--ink);text-decoration:none;white-space:nowrap}
+.brand i{width:22px;height:22px;border-radius:7px;background:var(--accent);display:grid;place-items:center;color:var(--accent-ink);font:800 12px system-ui;font-style:normal}
+.back{font:600 14px system-ui;color:var(--muted);text-decoration:none;white-space:nowrap}
+.back:hover{color:var(--accent)}
+main{flex:1;width:100%}
+.doc{max-width:760px;margin:0 auto;padding:48px 16px 64px}
+h1{font-size:32px;line-height:1.15;letter-spacing:-.03em;margin:0 0 6px}
+.meta{color:var(--muted);font-size:14px;margin:0 0 28px}
+h2{font-size:18px;letter-spacing:-.01em;margin:34px 0 8px}
+h3{font-size:15.5px;margin:20px 0 4px}
+p,ul,ol{margin:0 0 12px}
+ul,ol{padding-left:22px}
+li{margin:3px 0}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px 20px;margin:0 0 20px}
+.card p:last-child,.card ul:last-child{margin-bottom:0}
+.summary{background:var(--accent-bg);border-color:transparent}
+.ph{background:var(--ph-bg);color:var(--ph);font-weight:600;border-radius:5px;padding:0 4px;white-space:normal;overflow-wrap:anywhere}
+code,pre{font:13.5px/1.6 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+code{background:var(--code);border:1px solid var(--line);border-radius:6px;padding:1px 5px;overflow-wrap:anywhere}
+pre{background:var(--code);border:1px solid var(--line);border-radius:12px;padding:12px 14px;overflow-x:auto;margin:0 0 14px}
+pre code{background:none;border:0;padding:0}
+.tbl{width:100%;border-collapse:collapse;font-size:14.5px;margin:0 0 14px}
+.tbl th,.tbl td{text-align:left;vertical-align:top;padding:9px 10px;border-bottom:1px solid var(--line)}
+.tbl th{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+address{font-style:normal}
+footer{border-top:1px solid var(--line)}
+footer .bar{flex-wrap:wrap;justify-content:center;gap:6px 20px;padding:20px 16px;font-size:13.5px}
+footer a{color:var(--muted);text-decoration:none}
+footer a:hover,footer a[aria-current]{color:var(--accent)}
+@media (max-width:520px){.doc{padding-top:32px}h1{font-size:27px}.brand b{font-size:14px}
+.tbl,.tbl tbody,.tbl tr,.tbl td{display:block;width:100%}.tbl thead{display:none}.tbl tr{border-bottom:1px solid var(--line);padding:8px 0}
+.tbl td{border:0;padding:2px 0}.tbl td:first-child{font-weight:600}}
+</style>
+</head>
+<body>
+<header class="top"><div class="bar">
+  <a class="brand" href="/"><i aria-hidden="true">S</i><b>SEO · AEO · GEO Expert</b></a>
+  <a class="back" href="/">← Back to the app</a>
+</div></header>
+<main><article class="doc">
+<h1>About our crawler</h1>
+<p class="meta">For website owners and administrators who see <code>SEO-GEO-AEO-Audit</code> in their logs.</p>
+<div class="card summary">
+<p><b>In short:</b> our crawler only visits your website when a user of this service requests an audit of it. It reads at most about 60 pages, with no more than 4 requests at a time, respects your robots.txt, and can be blocked with two lines in robots.txt. It also sends up to 4 homepage requests with AI-crawler user agents to test firewall access (details below).</p>
+</div>
+
+<h2>How to recognise it</h2>
+<p>The main crawler identifies itself as <code>SEO-GEO-AEO-Audit/1.0 (+<span class="ph">[BOT_INFO_URL]</span>)</code>, appended to a browser-like user agent string. The link points to this page. The full string is:</p>
+<pre><code>Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36 SEO-GEO-AEO-Audit/1.0 (+<span class="ph">[BOT_INFO_URL, e.g. https://example.com/bot]</span>)</code></pre>
+<p>Requests come from <span class="ph">[SERVER IP ADDRESS(ES)]</span>, hosted by Hetzner Online GmbH in the EU.</p>
+
+<h2>When it runs</h2>
+<ul>
+<li>Only when a signed-in user asks for an audit of your website. There is no continuous or scheduled crawling.</li>
+<li>Each user has a small monthly limit, and the same site cannot be re-audited repeatedly in a short time.</li>
+<li>We do not build a search index, and we do not use your content to train AI models. The content is used only to create the report for the user who requested it.</li>
+</ul>
+
+<h2>What it fetches</h2>
+<ul>
+<li>Your homepage, <code>/robots.txt</code>, your XML sitemaps (up to 8) and <code>/llms.txt</code> / <code>/llms-full.txt</code> if they exist.</li>
+<li>Then up to about 60 further pages (the user chooses how many, typically 10–25), found through links on your homepage and in your sitemap. Images, scripts, stylesheets, PDFs and other files are skipped, as are login, account, cart and checkout pages.</li>
+<li>At most 4 requests in parallel. Temporary errors are retried at most twice, with a pause in between.</li>
+<li>Only public addresses: the crawler refuses to connect to private or internal networks.</li>
+</ul>
+
+<h2>AI crawler access test</h2>
+<p>Besides the main crawler, each audit makes <b>up to 4 single requests to your homepage</b> using the user agents of AI crawlers: <code>OAI-SearchBot</code>, <code>PerplexityBot</code>, <code>ClaudeBot</code> and <code>GPTBot</code> — one request per user agent, repeated once only if it times out. Their only purpose is to check whether your firewall or CDN (for example a “block AI bots” setting) turns AI crawlers away, which robots.txt alone does not show. No other pages are requested this way.</p>
+<p>These requests come from our server (<span class="ph">[SERVER IP ADDRESS(ES)]</span>), not from OpenAI, Perplexity or Anthropic, so you may see those bot names from our IP address in your logs. The report shown to the user labels the results as an audit test, not as real visits by those crawlers.</p>
+<p><span class="ph">[ONLY IF CORE WEB VITALS IS ENABLED]</span> If the user includes Core Web Vitals, Google's PageSpeed Insights service also loads your homepage from Google's own infrastructure.</p>
+
+<h2>robots.txt</h2>
+<p>The crawler follows the rules in your robots.txt for the group <code>User-agent: SEO-GEO-AEO-Audit</code> or, if there is none, for <code>User-agent: *</code> (RFC 9309 semantics: the longest matching rule wins). Pages you disallow are not crawled. If your robots.txt has a <code>User-agent: SEO-GEO-AEO-Audit</code> group that disallows your site, the audit stops after reading robots.txt: no other page is requested. Under a general <code>User-agent: *</code> block, the homepage, sitemaps and llms.txt are still read once per requested audit, so the report can tell the site owner that search engines are blocked.</p>
+
+<h2>How to block it</h2>
+<p>To stop our crawler from visiting your pages, add this to your robots.txt:</p>
+<pre><code>User-agent: SEO-GEO-AEO-Audit
+Disallow: /</code></pre>
+<p>To block only part of your site, use a more specific path, for example <code>Disallow: /private/</code>. You can also block our IP address <span class="ph">[SERVER IP ADDRESS(ES)]</span> in your firewall, or ask us to exclude your domain completely — see below.</p>
+
+<h2>Contact and abuse reports</h2>
+<p>If our crawler caused problems or you want your domain excluded from audits, email <span class="ph">[ABUSE EMAIL, e.g. abuse@example.com]</span>. Please include your domain and, if possible, the time and IP address of the requests. We usually reply within <span class="ph">[2 business days]</span>.</p>
+<p>Operator: <span class="ph">[COMPANY NAME]</span>, <span class="ph">[STREET, POSTCODE CITY, COUNTRY]</span>. See the <a href="/imprint">imprint</a>.</p>
+</article></main>
+<footer><div class="bar"><a href="/privacy">Privacy</a><a href="/terms">Terms</a><a href="/imprint">Imprint</a><a href="/bot" aria-current="page">About our crawler</a></div></footer>
+</body>
+</html>

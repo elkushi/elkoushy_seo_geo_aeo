@@ -1,0 +1,141 @@
+# CI + deploy for the SEO / AEO / GEO web app.
+#   every push / PR      -> tests
+#   push to main         -> build the image on GitHub, push to GHCR (private)
+#                        -> deploy to the server over SSH (only when the repo variable DEPLOY_ENABLED is "true")
+# Setup (secrets, variables, server prep): DEPLOY.md, section "Deploy with GitHub Actions".
+name: CI & deploy
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  IMAGE: ghcr.io/${{ github.repository }}
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install dependencies (web app only, same as the image)
+        run: |
+          grep -v "# optional" requirements.txt > /tmp/req.txt
+          pip install -r /tmp/req.txt pytest httpx
+      - name: Smoke tests (offline, SQLite)
+        run: python -m pytest -q tests
+      - name: Smoke tests (Postgres, as with DATABASE_URL on Render + Neon)
+        env:
+          DATABASE_URL: postgresql://test:test@localhost:5432/test
+        run: python -m pytest -q tests
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U test" --health-interval 5s --health-timeout 5s --health-retries 10
+
+  build:
+    needs: test
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      image: ${{ env.IMAGE }}:${{ github.sha }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build image for the container test
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          load: true
+          tags: seo-audit:ci
+          cache-from: type=gha
+      - name: Container test (Render-style PORT, root-owned disk, drops to non-root)
+        run: |
+          docker volume create ci-data
+          docker run --rm -v ci-data:/app/.tmp --entrypoint sh seo-audit:ci -c "true"
+          docker run --rm -u 0 -v ci-data:/app/.tmp --entrypoint chown seo-audit:ci root:root /app/.tmp
+          docker run -d --name ci -p 10000:10000 -e PORT=10000 -e PUBLIC_URL=http://127.0.0.1:10000 -v ci-data:/app/.tmp seo-audit:ci
+          for i in $(seq 1 30); do curl -fsS http://127.0.0.1:10000/api/config && break; sleep 2; done
+          curl -fsS http://127.0.0.1:10000/api/config | grep -q '"dev_login":true'
+          test "$(docker exec ci sh -c 'ps -o user= -p 1 2>/dev/null || stat -c %U /proc/1')" != root
+          docker exec -u app ci python -c "import os; assert os.getuid() != 0; open('/app/.tmp/write-test','w').write('ok')"
+          docker exec -u app ci python -c "import sys; sys.path.insert(0,'/app/tools'); from render_pdf import html_to_pdf; open('/tmp/t.html','w').write('<h1>pdf</h1>'); html_to_pdf('/tmp/t.html','/tmp/t.pdf'); print('pdf ok')"
+          docker logs ci | tail -5
+          docker rm -f ci
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ env.IMAGE }}:${{ github.sha }}
+            ${{ env.IMAGE }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy:
+    needs: build
+    if: vars.DEPLOY_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    environment: production
+    permissions:
+      contents: read
+      packages: read
+    env:
+      DEPLOY_PATH: ${{ vars.DEPLOY_PATH || 'seo-audit' }}  # relative to the SSH user's home, same folder as DEPLOY.md step 8
+      TARGET: ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}
+      APP_IMAGE: ${{ needs.build.outputs.image }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: SSH setup
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_deploy && chmod 600 ~/.ssh/id_deploy
+          printf '%s\n' "${{ secrets.SSH_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
+          printf 'Host *\n  IdentityFile ~/.ssh/id_deploy\n  StrictHostKeyChecking yes\n' > ~/.ssh/config
+
+      - name: Copy compose + Caddy config
+        run: scp docker-compose.yml Caddyfile "$TARGET:$DEPLOY_PATH/"
+
+      - name: Pull the new image and restart
+        run: |
+          # the token goes over stdin, never on a command line
+          echo "${{ secrets.GITHUB_TOKEN }}" | ssh "$TARGET" "docker login ghcr.io -u ${{ github.actor }} --password-stdin"
+          ssh "$TARGET" "cd $DEPLOY_PATH && APP_IMAGE=$APP_IMAGE docker compose pull app \
+            && APP_IMAGE=$APP_IMAGE docker compose up -d --no-build --remove-orphans \
+            && docker image prune -f >/dev/null; docker logout ghcr.io"
+
+      - name: Health check
+        if: vars.DOMAIN != ''
+        run: |
+          for i in $(seq 1 30); do
+            if curl -fsS "https://${{ vars.DOMAIN }}/api/config" | grep -q '"dev_login":false'; then echo "live"; exit 0; fi
+            sleep 5
+          done
+          echo "health check failed - see: ssh $TARGET 'cd $DEPLOY_PATH && docker compose logs --tail 50 app'"; exit 1

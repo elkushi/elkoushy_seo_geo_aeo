@@ -1,0 +1,43 @@
+# All free / open-source. Paid APIs are opt-in only (see .env.example).
+# Versions pinned to what is tested locally (`.venv/bin/pip freeze`); bump deliberately.
+# Lines tagged "# optional" are skipped by the Docker image (see Dockerfile) to keep it small.
+
+# Config + HTTP
+python-dotenv==1.2.4
+requests==2.34.2
+
+# On-page parsing (titles, headings, meta, links); lxml is the BeautifulSoup parser
+beautifulsoup4==4.15.0
+lxml==6.1.3
+
+# Structured data: JSON-LD, microdata, OpenGraph (core for AEO/GEO)
+extruct==0.18.0
+
+# robots.txt, sitemaps, crawling, SERP-style analysis
+advertools==0.18.0  # optional, not used by the web app (only listed in tools/check_setup.py)
+
+# Google APIs (free): Search Console, Sheets, Slides (PageSpeed is called with plain requests)
+google-api-python-client==2.201.0  # optional, not used by the web app
+google-auth-oauthlib==1.5.0  # optional, not used by the web app
+google-auth-httplib2==0.4.4  # optional, not used by the web app
+
+# Keyless DuckDuckGo search for SERP / competitor discovery
+ddgs==9.16.0
+
+# Tabular data / exports
+pandas==3.0.6  # optional, not used by the web app
+
+# Web app (app/server.py) + HTML report rendering (templates/)
+fastapi==0.162.0
+uvicorn==0.54.0
+jinja2==3.1.6
+
+# PDF reports: headless Chromium renders report.html to PDF (tools/render_pdf.py).
+# After install, once per machine: python -m playwright install chromium
+playwright==1.64.1
+
+# OpenAI-compatible client for the NVIDIA NIM LLM (AI visibility check)
+openai==3.37.0
+
+# Postgres storage when DATABASE_URL is set (e.g. Neon free tier for hosts without a disk)
+psycopg[binary]==3.3.6
